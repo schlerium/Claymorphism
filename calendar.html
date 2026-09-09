@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f4f4f9;
+            background-image:
+                radial-gradient(circle at 20% 20%, rgba(255,255,255,0.6), transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(0,0,0,0.03), transparent 40%);
+        }
+
+        .calendar {
+            background-color: #f4f4f9;
+            border-radius: 32px;
+            padding: 24px;
+            width: 340px;
+            box-shadow:
+                12px 12px 24px rgba(163, 163, 178, 0.55),
+                -12px -12px 24px rgba(255, 255, 255, 0.9),
+                inset 1px 1px 1px rgba(255, 255, 255, 0.5);
+        }
+
+        .header {
+            background-color: #252525;
+            color: #fff;
+            border-radius: 20px;
+            padding: 16px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            box-shadow:
+                inset 6px 6px 12px rgba(0, 0, 0, 0.55),
+                inset -6px -6px 12px rgba(70, 70, 70, 0.4),
+                0 2px 2px rgba(255, 255, 255, 0.05);
+        }
+
+        .header .month-year {
+            font-size: 1.15em;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            transition: opacity 0.35s ease;
+        }
+
+        .nav-btn {
+            width: 34px;
+            height: 34px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            background-color: #e0e0e0;
+            color: #444;
+            font-size: 1em;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            outline: none !important;
+            -webkit-appearance: none;
+            appearance: none;
+            touch-action: manipulation;
+            box-shadow:
+                4px 4px 8px rgba(163, 163, 178, 0.5),
+                -4px -4px 8px rgba(255, 255, 255, 0.9),
+                inset 1px 1px 1px rgba(255, 255, 255, 0.6);
+            transition: all 0.15s ease;
+        }
+
+        .nav-btn:hover {
+            background-color: #d8d8d8;
+            transform: translateY(-1px);
+        }
+
+        .nav-btn:active {
+            transform: translateY(1px) scale(0.95);
+            box-shadow:
+                inset 3px 3px 6px rgba(163, 163, 178, 0.6),
+                inset -3px -3px 6px rgba(255, 255, 255, 0.7);
+        }
+
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .weekdays div {
+            text-align: center;
+            font-size: 0.75em;
+            font-weight: 700;
+            color: #9a9aa5;
+            padding: 4px 0;
+        }
+
+        .weekdays .sunday-label {
+            color: #e04b4b;
+        }
+
+        .day.sunday {
+            color: #e04b4b;
+        }
+
+        .day.sunday.muted {
+            color: #f0b3b3;
+        }
+
+        .days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+
+        .day {
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            background-color: #e0e0e0;
+            color: #555;
+            font-size: 0.9em;
+            font-weight: 600;
+            outline: none !important;
+            -webkit-appearance: none;
+            appearance: none;
+            touch-action: manipulation;
+            box-shadow:
+                4px 4px 8px rgba(163, 163, 178, 0.5),
+                -4px -4px 8px rgba(255, 255, 255, 0.9),
+                inset 1px 1px 1px rgba(255, 255, 255, 0.6);
+            transition: all 0.15s ease;
+        }
+
+        .day::-moz-focus-inner {
+            border: 0;
+        }
+
+        .day:hover {
+            background-color: #d8d8d8;
+            transform: translateY(-1px);
+        }
+
+        .day:active {
+            transform: translateY(1px) scale(0.95);
+            box-shadow:
+                inset 3px 3px 6px rgba(163, 163, 178, 0.6),
+                inset -3px -3px 6px rgba(255, 255, 255, 0.7);
+        }
+
+        .day.muted {
+            color: #c5c5cc;
+            background-color: #ececf1;
+            box-shadow:
+                3px 3px 6px rgba(163, 163, 178, 0.35),
+                -3px -3px 6px rgba(255, 255, 255, 0.8);
+        }
+
+        .day.muted:hover {
+            background-color: #e2e2e8;
+            transform: translateY(-1px);
+        }
+
+        .day.today {
+            background-color: #ff9500;
+            color: #fff;
+            box-shadow:
+                4px 4px 8px rgba(196, 116, 0, 0.4),
+                -4px -4px 8px rgba(255, 185, 90, 0.7),
+                inset 1px 1px 1px rgba(255, 220, 170, 0.6);
+        }
+
+        .day.today:hover {
+            background-color: #ff9f14;
+        }
+
+        .day.selected {
+            background-color: #4CAF50;
+            color: #fff;
+            box-shadow:
+                inset 4px 4px 8px rgba(46, 110, 48, 0.55),
+                inset -4px -4px 8px rgba(120, 210, 122, 0.5);
+        }
+
+        /* Claymorphism month-transition: the clay levels flat into the
+           surface and the numbers fade, before the new month rises back up */
+        .day.flat {
+            background-color: #f4f4f9;
+            color: transparent;
+            transform: scale(0.92);
+            box-shadow:
+                0px 0px 0px rgba(163, 163, 178, 0),
+                0px 0px 0px rgba(255, 255, 255, 0),
+                inset 0px 0px 0px rgba(255, 255, 255, 0);
+        }
+
+        .footer {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .today-btn {
+            border: none;
+            border-radius: 16px;
+            padding: 12px 24px;
+            font-size: 0.9em;
+            font-weight: 700;
+            color: #fff;
+            background-color: #4CAF50;
+            cursor: pointer;
+            outline: none !important;
+            -webkit-appearance: none;
+            appearance: none;
+            touch-action: manipulation;
+            box-shadow:
+                6px 6px 12px rgba(46, 110, 48, 0.4),
+                -6px -6px 12px rgba(120, 210, 122, 0.7),
+                inset 1px 1px 1px rgba(180, 235, 180, 0.6);
+            transition: all 0.15s ease;
+        }
+
+        .today-btn::-moz-focus-inner {
+            border: 0;
+        }
+
+        .today-btn:hover {
+            background-color: #55bb59;
+            transform: translateY(-1px);
+        }
+
+        .today-btn:active {
+            transform: translateY(1px) scale(0.97);
+            box-shadow:
+                inset 4px 4px 8px rgba(46, 110, 48, 0.55),
+                inset -4px -4px 8px rgba(120, 210, 122, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="calendar">
+        <div class="header">
+            <button class="nav-btn" onclick="changeMonth(-1)">&#8249;</button>
+            <div class="month-year" id="monthYear"></div>
+            <button class="nav-btn" onclick="changeMonth(1)">&#8250;</button>
+        </div>
+
+        <div class="weekdays">
+            <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div class="sunday-label">Su</div>
+        </div>
+
+        <div class="days" id="days"></div>
+
+        <div class="footer">
+            <button class="today-btn" onclick="goToToday()">Today</button>
+        </div>
+    </div>
+
+    <script>
+        const monthNames = ["January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"];
+
+        const today = new Date();
+        let viewDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        let selectedDate = null;
+        let isAnimating = false;
+
+        const monthYearEl = document.getElementById('monthYear');
+        const daysEl = document.getElementById('days');
+
+        function renderCalendar(startFlat) {
+            const year = viewDate.getFullYear();
+            const month = viewDate.getMonth();
+
+            monthYearEl.textContent = `${monthNames[month]} ${year}`;
+            daysEl.innerHTML = '';
+
+            // Convert JS getDay() (0=Sun..6=Sat) to a Monday-start index (0=Mon..6=Sun)
+            const rawFirstDay = new Date(year, month, 1).getDay();
+            const firstDay = (rawFirstDay + 6) % 7;
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+            // Leading days from previous month
+            for (let i = firstDay - 1; i >= 0; i--) {
+                const dayNum = daysInPrevMonth - i;
+                const cellIndex = firstDay - 1 - i;
+                daysEl.appendChild(makeDay(dayNum, cellIndex, true, false, false, startFlat, () => {
+                    goToMonth(new Date(year, month - 1, 1), new Date(year, month - 1, dayNum));
+                }));
+            }
+
+            // Days of current month
+            for (let d = 1; d <= daysInMonth; d++) {
+                const isToday = d === today.getDate() &&
+                    month === today.getMonth() &&
+                    year === today.getFullYear();
+
+                const isSelected = selectedDate &&
+                    d === selectedDate.getDate() &&
+                    month === selectedDate.getMonth() &&
+                    year === selectedDate.getFullYear();
+
+                const cellIndex = (firstDay + d - 1) % 7;
+
+                daysEl.appendChild(makeDay(d, cellIndex, false, isToday, isSelected, startFlat, () => {
+                    selectedDate = new Date(year, month, d);
+                    renderCalendar();
+                }));
+            }
+
+            // Trailing days from next month to fill grid
+            const totalCells = firstDay + daysInMonth;
+            const remaining = (7 - (totalCells % 7)) % 7;
+            for (let d = 1; d <= remaining; d++) {
+                const cellIndex = (totalCells + d - 1) % 7;
+                daysEl.appendChild(makeDay(d, cellIndex, true, false, false, startFlat, () => {
+                    goToMonth(new Date(year, month + 1, 1), new Date(year, month + 1, d));
+                }));
+            }
+        }
+
+        function makeDay(num, cellIndex, muted, isToday, isSelected, startFlat, onClick) {
+            const btn = document.createElement('button');
+            btn.textContent = num;
+            btn.className = 'day';
+            if (cellIndex === 6) btn.classList.add('sunday'); // Monday-start week: index 6 = Sunday
+            if (muted) btn.classList.add('muted');
+            if (isToday) btn.classList.add('today');
+            if (isSelected) btn.classList.add('selected');
+            if (startFlat) btn.classList.add('flat');
+            if (onClick) btn.onclick = onClick;
+            return btn;
+        }
+
+        // Delicately levels the current month flat into the surface (numbers
+        // fading away), swaps the data, then lets the new month rise back up.
+        function animateMonthChange(mutate) {
+            if (isAnimating) return;
+            isAnimating = true;
+            daysEl.style.pointerEvents = 'none';
+
+            const outgoing = Array.from(daysEl.children);
+            const stagger = 9; // ms between each cell's start, for a gentle wave
+            const sinkDuration = 380;
+
+            outgoing.forEach((cell, i) => {
+                cell.style.transitionDuration = `${sinkDuration}ms`;
+                cell.style.transitionDelay = `${i * stagger}ms`;
+                cell.classList.add('flat');
+            });
+            monthYearEl.style.opacity = '0';
+
+            const sinkTotal = sinkDuration + outgoing.length * stagger;
+
+            setTimeout(() => {
+                mutate();
+                renderCalendar(true); // new cells are created already "flat"
+
+                requestAnimationFrame(() => {
+                    const incoming = Array.from(daysEl.children);
+                    incoming.forEach((cell, i) => {
+                        cell.style.transitionDuration = `${sinkDuration}ms`;
+                        cell.style.transitionDelay = `${i * stagger}ms`;
+                    });
+                    void daysEl.offsetWidth; // force reflow so the transition triggers
+                    incoming.forEach(cell => cell.classList.remove('flat'));
+                    monthYearEl.style.opacity = '1';
+
+                    const riseTotal = sinkDuration + incoming.length * stagger;
+                    setTimeout(() => {
+                        incoming.forEach(cell => {
+                            cell.style.transitionDuration = '';
+                            cell.style.transitionDelay = '';
+                        });
+                        daysEl.style.pointerEvents = '';
+                        isAnimating = false;
+                    }, riseTotal + 60);
+                });
+            }, sinkTotal + 60);
+        }
+
+        function goToMonth(newViewDate, newSelectedDate) {
+            animateMonthChange(() => {
+                viewDate = newViewDate;
+                selectedDate = newSelectedDate;
+            });
+        }
+
+        function changeMonth(delta) {
+            const target = new Date(viewDate.getFullYear(), viewDate.getMonth() + delta, 1);
+            animateMonthChange(() => {
+                viewDate = target;
+            });
+        }
+
+        function goToToday() {
+            const sameMonth = viewDate.getFullYear() === today.getFullYear() &&
+                viewDate.getMonth() === today.getMonth();
+
+            if (sameMonth) {
+                selectedDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                renderCalendar();
+            } else {
+                goToMonth(
+                    new Date(today.getFullYear(), today.getMonth(), 1),
+                    new Date(today.getFullYear(), today.getMonth(), today.getDate())
+                );
+            }
+        }
+
+        renderCalendar();
+    </script>
+</body>
+</html>
