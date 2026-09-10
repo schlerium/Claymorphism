@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 24px 12px;
+            background-color: #f4f4f9;
+            background-image:
+                radial-gradient(circle at 20% 20%, rgba(255,255,255,0.6), transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(0,0,0,0.03), transparent 40%);
+            gap: 18px;
+        }
+
+        .calendar {
+            background-color: #f4f4f9;
+            border-radius: 32px;
+            padding: 24px;
+            width: 340px;
+            box-shadow:
+                12px 12px 24px rgba(163, 163, 178, 0.55),
+                -12px -12px 24px rgba(255, 255, 255, 0.9),
+                inset 1px 1px 1px rgba(255, 255, 255, 0.5);
+        }
+
+        .header {
+            background-color: #252525;
+            color: #fff;
+            border-radius: 20px;
+            padding: 16px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            box-shadow:
+                inset 6px 6px 12px rgba(0, 0, 0, 0.55),
+                inset -6px -6px 12px rgba(70, 70, 70, 0.4),
+                0 2px 2px rgba(255, 255, 255, 0.05);
+        }
+
+        .header .month-year {
+            font-size: 1.15em;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            transition: opacity 0.35s ease;
+        }
+
+        .nav-btn {
+            width: 34px;
+            height: 34px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            background-color: #e0e0e0;
+            color: #444;
+            font-size: 1em;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            outline: none !important;
+            -webkit-appearance: none;
+            appearance: none;
+            touch-action: manipulation;
+            box-shadow:
+                4px 4px 8px rgba(163, 163, 178, 0.5),
+                -4px -4px 8px rgba(255, 255, 255, 0.9),
+                inset 1px 1px 1px rgba(255, 255, 255, 0.6);
+            transition: all 0.15s ease;
+        }
+
+        .nav-btn:hover {
+            background-color: #d8d8d8;
+            transform: translateY(-1px);
+        }
+
+        .nav-btn:active {
+            transform: translateY(1px) scale(0.95);
+            box-shadow:
+                inset 3px 3px 6px rgba(163, 163, 178, 0.6),
+                inset -3px -3px 6px rgba(255, 255, 255, 0.7);
+        }
+
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .weekdays div {
+            text-align: center;
+            font-size: 0.75em;
+            font-weight: 700;
+            color: #9a9aa5;
+            padding: 4px 0;
+        }
+
+        .weekdays .sunday-label {
+            color: #e04b4b;
+        }
+
+        .day.sunday {
+            color: #e04b4b;
+        }
+
+        .day.sunday.muted {
+            color: #f0b3b3;
+        }
+
+        .days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+
+        .day {
+            position: relative;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            background-color: #e0e0e0;
+            color: #555;
+            font-size: 0.9em;
+            font-weight: 600;
+            outline: none !important;
+            -webkit-appearance: none;
+            appearance: none;
+            touch-action: manipulation;
+            box-shadow:
+                4px 4px 8px rgba(163, 163, 178, 0.5),
+                -4px -4px 8px rgba(255, 255, 255, 0.9),
+                inset 1px 1px 1px rgba(255, 255, 255, 0.6);
+            transition: all 0.15s ease;
+        }
+
+        .day::-moz-focus-inner {
+            border: 0;
+        }
+
+        .day:hover {
+            background-color: #d8d8d8;
+            transform: translateY(-1px);
+        }
+
+        .day:active {
+            transform: translateY(1px) scale(0.95);
+            box-shadow:
+                inset 3px 3px 6px rgba(163, 163, 178, 0.6),
+                inset -3px -3px 6px rgba(255, 255, 255, 0.7);
+        }
+
+        .day.muted {
+            color: #c5c5cc;
+            background-color: #ececf1;
+            box-shadow:
+                3px 3px 6px rgba(163, 163, 178, 0.35),
+                -3px -3px 6px rgba(255, 255, 255, 0.8);
+        }
+
+        .day.muted:hover {
+            background-color: #e2e2e8;
+            transform: translateY(-1px);
+        }
+
+        .day.today {
+            background-color: #ff9500;
+            color: #fff;
+            box-shadow:
+                4px 4px 8px rgba(196, 116, 0, 0.4),
+                -4px -4px 8px rgba(255, 185, 90, 0.7),
+                inset 1px 1px 1px rgba(255, 220, 170, 0.6);
+        }
+
+        .day.today:hover {
+            background-color: #ff9f14;
+        }
+
+        .day.selected {
+            background-color: #4CAF50;
+            color: #fff;
+            box-shadow:
+                inset 4px 4px 8px rgba(46, 110, 48, 0.55),
+                inset -4px -4px 8px rgba(120, 210, 122, 0.5);
+        }
+
+        /* Small clay pip under any day that has an event scheduled */
+        .day .event-pip {
+            position: absolute;
+            bottom: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 12px;
+            height: 4px;
+            border-radius: 4px;
+            background-color: #4CAF50;
+            box-shadow: 0 1px 1px rgba(46, 110, 48, 0.35);
+        }
+
+        .day.today .event-pip,
+        .day.selected .event-pip {
+            background-color: #fff;
+            opacity: 0.85;
+        }
+
+        .day.muted .event-pip {
+            background-color: #b9d9bb;
+        }
+
+        /* Small badge in the top-right corner marking an Indian public holiday.
+           Kept separate from the event-pip (bottom) so the two never collide. */
+        .day .holiday-badge {
+            position: absolute;
+            top: 6px;
+            right: 8px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: #e0663e;
+            box-shadow: 0 1px 1px rgba(160, 70, 40, 0.35);
+        }
+
+        .day.today .holiday-badge,
+        .day.selected .holiday-badge {
+            background-color: #fff;
+            opacity: 0.85;
+        }
+
+        .day.muted .holiday-badge {
+            background-color: #f0c3b3;
+        }
+
+        /* Claymorphism month-transition: the clay levels flat into the
+           surface and the numbers fade, before the new month rises back up */
+        .day.flat {
+            background-color: #f4f4f9;
+            color: transparent;
+            transform: scale(0.92);
+            box-shadow:
+                0px 0px 0px rgba(163, 163, 178, 0),
+                0px 0px 0px rgba(255, 255, 255, 0),
+                inset 0px 0px 0px rgba(255, 255, 255, 0);
+        }
+
+        .day.flat .event-pip {
+            opacity: 0;
+        }
+
+        .footer {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .today-btn {
+            border: none;
+            border-radius: 16px;
+            padding: 12px 24px;
+            font-size: 0.9em;
+            font-weight: 700;
+            color: #fff;
+            background-color: #4CAF50;
+            cursor: pointer;
+            outline: none !important;
+            -webkit-appearance: none;
+            appearance: none;
+            touch-action: manipulation;
+            box-shadow:
+                6px 6px 12px rgba(46, 110, 48, 0.4),
+                -6px -6px 12px rgba(120, 210, 122, 0.7),
+                inset 1px 1px 1px rgba(180, 235, 180, 0.6);
+            transition: all 0.15s ease;
+        }
+
+        .today-btn::-moz-focus-inner {
+            border: 0;
+        }
+
+        .today-btn:hover {
+            background-color: #55bb59;
+            transform: translateY(-1px);
+        }
+
+        .today-btn:active {
+            transform: translateY(1px) scale(0.97);
+            box-shadow:
+                inset 4px 4px 8px rgba(46, 110, 48, 0.55),
+                inset -4px -4px 8px rgba(120, 210, 122, 0.5);
+        }
+
+        /* ---------- Event adder panel ---------- */
+
+        .event-panel {
+            background-color: #f4f4f9;
+            border-radius: 32px;
+            padding: 22px 24px 24px;
+            width: 340px;
+            box-shadow:
+                12px 12px 24px rgba(163, 163, 178, 0.55),
+                -12px -12px 24px rgba(255, 255, 255, 0.9),
+                inset 1px 1px 1px rgba(255, 255, 255, 0.5);
+        }
+
+        .event-panel .panel-date {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .event-panel .panel-date-num {
+            font-size: 1.9em;
+            font-weight: 800;
+            color: #3a3a42;
+            min-width: 1.1em;
+            text-align: center;
+        }
+
+        .event-panel .panel-date-day {
+            font-size: 0.85em;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #9a9aa5;
+        }
+
+        .add-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+
+        .add-input {
+            flex: 1;
+            border: none;
+            border-radius: 18px;
+            padding: 14px 18px;
+            font-size: 0.9em;
+            font-family: inherit;
+            color: #3a3a42;
+            background-color: #e8e8ee;
+            outline: none !important;
+            box-shadow:
+                inset 4px 4px 8px rgba(163, 163, 178, 0.45),
+                inset -4px -4px 8px rgba(255, 255, 255, 0.8);
+            user-select: text;
+            -webkit-user-select: text;
+        }
+
+        .add-input::placeholder {
+            color: #a9a9b3;
+        }
+
+        .add-btn {
+            flex-shrink: 0;
+            width: 48px;
+            height: 48px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            background-color: #e0e0e0;
+            color: #4a90d9;
+            font-size: 1.4em;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            outline: none !important;
+            -webkit-appearance: none;
+            appearance: none;
+            touch-action: manipulation;
+            box-shadow:
+                5px 5px 10px rgba(163, 163, 178, 0.5),
+                -5px -5px 10px rgba(255, 255, 255, 0.9),
+                inset 1px 1px 1px rgba(255, 255, 255, 0.6);
+            transition: all 0.15s ease;
+        }
+
+        .add-btn:hover {
+            background-color: #d8d8d8;
+            transform: translateY(-1px);
+        }
+
+        .add-btn:active {
+            transform: translateY(1px) scale(0.94);
+            box-shadow:
+                inset 3px 3px 6px rgba(163, 163, 178, 0.6),
+                inset -3px -3px 6px rgba(255, 255, 255, 0.7);
+        }
+
+        .event-list {
+            list-style: none;
+            margin: 16px -6px 0;
+            padding: 4px 6px 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 240px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .event-list:empty {
+            margin-top: 0;
+        }
+
+        .event-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background-color: #e8e8ee;
+            border-radius: 16px;
+            padding: 12px 14px;
+            box-shadow:
+                3px 3px 6px rgba(163, 163, 178, 0.4),
+                -3px -3px 6px rgba(255, 255, 255, 0.85);
+        }
+
+        .event-item .dot {
+            flex-shrink: 0;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #4CAF50;
+        }
+
+        .event-item .label {
+            flex: 1;
+            font-size: 0.88em;
+            font-weight: 600;
+            color: #4a4a52;
+            word-break: break-word;
+            user-select: text;
+            -webkit-user-select: text;
+            min-width: 0;
+        }
+
+        .event-item .label-input {
+            flex: 1;
+            min-width: 0;
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            font-size: 0.88em;
+            font-weight: 600;
+            color: #4a4a52;
+            padding: 2px 0;
+            border-bottom: 2px solid #c7c7d1;
+            outline: none !important;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+
+        .event-item .actions {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .icon-btn {
+            flex-shrink: 0;
+            width: 26px;
+            height: 26px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            background-color: #e0e0e0;
+            font-size: 0.8em;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            outline: none !important;
+            -webkit-appearance: none;
+            appearance: none;
+            box-shadow:
+                2px 2px 5px rgba(163, 163, 178, 0.5),
+                -2px -2px 5px rgba(255, 255, 255, 0.9);
+            transition: all 0.15s ease;
+        }
+
+        .icon-btn:active {
+            transform: scale(0.92);
+            box-shadow:
+                inset 2px 2px 4px rgba(163, 163, 178, 0.6),
+                inset -2px -2px 4px rgba(255, 255, 255, 0.7);
+        }
+
+        /* Read-only pinned row showing the Indian public holiday for the
+           selected day, if any. Sits above the user's own events and has
+           no kebab menu since it can't be edited or deleted. */
+        .event-item.holiday-item {
+            background-color: #fbe9e2;
+        }
+
+        .event-item.holiday-item .dot {
+            background-color: #e0663e;
+        }
+
+        .event-item.holiday-item .label {
+            color: #a05028;
+        }
+
+        .icon-btn.kebab {
+            gap: 2px;
+        }
+
+        .icon-btn.kebab .kebab-dot {
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background-color: #8c8c96;
+        }
+
+        .icon-btn.edit-btn { color: #4a90d9; }
+        .icon-btn.cancel-btn { color: #4a90d9; }
+        .icon-btn.delete-btn { color: #b05050; }
+        .icon-btn.confirm-btn { color: #4CAF50; }
+
+        .no-events {
+            margin-top: 16px;
+            text-align: center;
+            font-size: 0.82em;
+            font-weight: 600;
+            color: #b3b3bd;
+        }
+    </style>
+</head>
+<body>
+    <div class="calendar">
+        <div class="header">
+            <button class="nav-btn" onclick="changeMonth(-1)">&#8249;</button>
+            <div class="month-year" id="monthYear"></div>
+            <button class="nav-btn" onclick="changeMonth(1)">&#8250;</button>
+        </div>
+
+        <div class="weekdays">
+            <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div class="sunday-label">Su</div>
+        </div>
+
+        <div class="days" id="days"></div>
+
+        <div class="footer">
+            <button class="today-btn" onclick="goToToday()">Today</button>
+        </div>
+    </div>
+
+    <div class="event-panel">
+        <div class="panel-date">
+            <span class="panel-date-num" id="panelDateNum"></span>
+            <span class="panel-date-day" id="panelDateDay"></span>
+        </div>
+
+        <div class="add-row">
+            <input type="text" class="add-input" id="eventInput" placeholder="Add event" />
+            <button class="add-btn" id="addBtn" onclick="addEvent()">&#43;</button>
+        </div>
+
+        <ul class="event-list" id="eventList"></ul>
+        <div class="no-events" id="noEvents">No events yet</div>
+    </div>
+
+    <script>
+        const monthNames = ["January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"];
+        const monthNamesShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const dayNamesShort = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+        const today = new Date();
+        let viewDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        let selectedDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        let isAnimating = false;
+
+        // ---------- Persistence (localStorage) ----------
+        // Events used to live only in memory, so a tab refresh or clearing
+        // the tab wiped them out. They're now mirrored to localStorage,
+        // which survives closing the tab/browser and reopening the page
+        // later (it's tied to this page's origin, e.g. your github.io URL).
+        // Every read/write is wrapped in try/catch: some browsers (private
+        ///incognito modes, locked-down webviews) block storage entirely,
+        // and this way that just silently falls back to in-memory-only
+        // behavior instead of throwing an error the user would see.
+        const EVENTS_STORAGE_KEY = 'clayCalendarEvents';
+
+        function loadEventsFromStorage() {
+            try {
+                const raw = localStorage.getItem(EVENTS_STORAGE_KEY);
+                return raw ? JSON.parse(raw) : {};
+            } catch (err) {
+                return {};
+            }
+        }
+
+        function saveEventsToStorage() {
+            try {
+                localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(events));
+            } catch (err) {
+                // Storage full or unavailable - events still work for this
+                // session, they just won't persist. Fail silently.
+            }
+        }
+
+        // Event store, keyed by "yyyy-m-d". Seeded from localStorage on load.
+        const events = loadEventsFromStorage();
+
+        // ---------- Indian public holidays (auto-imported) ----------
+        // Festival/holiday dates shift year to year (many follow the lunar
+        // calendar), so a bundled static list would go stale. Instead this
+        // fetches each year's dates, once, from a free public holiday API
+        // and caches the result in localStorage so repeat visits don't
+        // re-fetch. If the request fails (offline, blocked, etc.) it just
+        // gives up quietly - no holiday dots that session, but the rest of
+        // the calendar keeps working normally.
+        const HOLIDAYS_STORAGE_KEY = 'clayCalendarHolidaysIN';
+        const HOLIDAY_COUNTRY = 'IN';
+
+        function loadHolidayCache() {
+            try {
+                const raw = localStorage.getItem(HOLIDAYS_STORAGE_KEY);
+                return raw ? JSON.parse(raw) : {};
+            } catch (err) {
+                return {};
+            }
+        }
+
+        function saveHolidayCache() {
+            try {
+                localStorage.setItem(HOLIDAYS_STORAGE_KEY, JSON.stringify(holidayCache));
+            } catch (err) {
+                // Ignore - holidays just won't be cached for next time.
+            }
+        }
+
+        // holidayCache: { "2026": { "2026-0-26": "Republic Day", ... }, ... }
+        const holidayCache = loadHolidayCache();
+        const holidayFetchesInFlight = new Set();
+
+        function ensureHolidaysForYear(year) {
+            const yearKey = String(year);
+            if (holidayCache[yearKey] || holidayFetchesInFlight.has(yearKey)) return;
+            holidayFetchesInFlight.add(yearKey);
+
+            fetch(`https://date.nager.at/api/v3/publicholidays/${year}/${HOLIDAY_COUNTRY}`)
+                .then(res => {
+                    if (!res.ok) throw new Error('bad response');
+                    return res.json();
+                })
+                .then(list => {
+                    const yearMap = {};
+                    list.forEach(h => {
+                        // h.date looks like "2026-01-26"; convert to this
+                        // app's own dateKey format (month is 0-indexed here).
+                        const [y, m, d] = h.date.split('-').map(Number);
+                        const key = `${y}-${m - 1}-${d}`;
+                        yearMap[key] = h.localName || h.name;
+                    });
+                    holidayCache[yearKey] = yearMap;
+                    saveHolidayCache();
+                    renderCalendar();
+                    updateEventPanel();
+                })
+                .catch(() => {
+                    // Offline, API down, blocked by network policy, etc.
+                    // Deliberately no error shown to the user - the
+                    // calendar just carries on without holiday markers.
+                })
+                .finally(() => {
+                    holidayFetchesInFlight.delete(yearKey);
+                });
+        }
+
+        function getHolidayName(d) {
+            const yearMap = holidayCache[String(d.getFullYear())];
+            if (!yearMap) return null;
+            return yearMap[dateKey(d)] || null;
+        }
+
+        const monthYearEl = document.getElementById('monthYear');
+        const daysEl = document.getElementById('days');
+        const panelDateNumEl = document.getElementById('panelDateNum');
+        const panelDateDayEl = document.getElementById('panelDateDay');
+        const eventInputEl = document.getElementById('eventInput');
+        const eventListEl = document.getElementById('eventList');
+        const noEventsEl = document.getElementById('noEvents');
+
+        function dateKey(d) {
+            return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        }
+
+        function renderCalendar(startFlat) {
+            const year = viewDate.getFullYear();
+            const month = viewDate.getMonth();
+
+            monthYearEl.textContent = `${monthNames[month]} ${year}`;
+            daysEl.innerHTML = '';
+
+            // Make sure we have (or are fetching) holiday data for whatever
+            // year is currently on screen.
+            ensureHolidaysForYear(year);
+
+            // Convert JS getDay() (0=Sun..6=Sat) to a Monday-start index (0=Mon..6=Sat)
+            const rawFirstDay = new Date(year, month, 1).getDay();
+            const firstDay = (rawFirstDay + 6) % 7;
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+            // Leading days from previous month
+            for (let i = firstDay - 1; i >= 0; i--) {
+                const dayNum = daysInPrevMonth - i;
+                const cellIndex = firstDay - 1 - i;
+                const cellDate = new Date(year, month - 1, dayNum);
+                daysEl.appendChild(makeDay(dayNum, cellIndex, true, false, false, startFlat, cellDate, () => {
+                    goToMonth(new Date(year, month - 1, 1), new Date(year, month - 1, dayNum));
+                }));
+            }
+
+            // Days of current month
+            for (let d = 1; d <= daysInMonth; d++) {
+                const isToday = d === today.getDate() &&
+                    month === today.getMonth() &&
+                    year === today.getFullYear();
+
+                const isSelected = selectedDate &&
+                    d === selectedDate.getDate() &&
+                    month === selectedDate.getMonth() &&
+                    year === selectedDate.getFullYear();
+
+                const cellIndex = (firstDay + d - 1) % 7;
+                const cellDate = new Date(year, month, d);
+
+                daysEl.appendChild(makeDay(d, cellIndex, false, isToday, isSelected, startFlat, cellDate, () => {
+                    selectedDate = new Date(year, month, d);
+                    renderCalendar();
+                    updateEventPanel();
+                }));
+            }
+
+            // Trailing days from next month to fill grid
+            const totalCells = firstDay + daysInMonth;
+            const remaining = (7 - (totalCells % 7)) % 7;
+            for (let d = 1; d <= remaining; d++) {
+                const cellIndex = (totalCells + d - 1) % 7;
+                const cellDate = new Date(year, month + 1, d);
+                daysEl.appendChild(makeDay(d, cellIndex, true, false, false, startFlat, cellDate, () => {
+                    goToMonth(new Date(year, month + 1, 1), new Date(year, month + 1, d));
+                }));
+            }
+        }
+
+        function makeDay(num, cellIndex, muted, isToday, isSelected, startFlat, cellDate, onClick) {
+            const btn = document.createElement('button');
+            btn.className = 'day';
+            if (cellIndex === 6) btn.classList.add('sunday'); // Monday-start week: index 6 = Sunday
+            if (muted) btn.classList.add('muted');
+            if (isToday) btn.classList.add('today');
+            if (isSelected) btn.classList.add('selected');
+            if (startFlat) btn.classList.add('flat');
+            if (onClick) btn.onclick = onClick;
+
+            const numSpan = document.createElement('span');
+            numSpan.textContent = num;
+            btn.appendChild(numSpan);
+
+            const key = dateKey(cellDate);
+            if (events[key] && events[key].length > 0) {
+                const pip = document.createElement('span');
+                pip.className = 'event-pip';
+                btn.appendChild(pip);
+            }
+
+            if (getHolidayName(cellDate)) {
+                btn.classList.add('holiday');
+                const badge = document.createElement('span');
+                badge.className = 'holiday-badge';
+                btn.appendChild(badge);
+            }
+
+            return btn;
+        }
+
+        // Delicately levels the current month flat into the surface (numbers
+        // fading away), swaps the data, then lets the new month rise back up.
+        function animateMonthChange(mutate) {
+            if (isAnimating) return;
+            isAnimating = true;
+            daysEl.style.pointerEvents = 'none';
+
+            const outgoing = Array.from(daysEl.children);
+            const stagger = 9; // ms between each cell's start, for a gentle wave
+            const sinkDuration = 380;
+
+            outgoing.forEach((cell, i) => {
+                cell.style.transitionDuration = `${sinkDuration}ms`;
+                cell.style.transitionDelay = `${i * stagger}ms`;
+                cell.classList.add('flat');
+            });
+            monthYearEl.style.opacity = '0';
+
+            const sinkTotal = sinkDuration + outgoing.length * stagger;
+
+            setTimeout(() => {
+                mutate();
+                renderCalendar(true); // new cells are created already "flat"
+
+                requestAnimationFrame(() => {
+                    const incoming = Array.from(daysEl.children);
+                    incoming.forEach((cell, i) => {
+                        cell.style.transitionDuration = `${sinkDuration}ms`;
+                        cell.style.transitionDelay = `${i * stagger}ms`;
+                    });
+                    void daysEl.offsetWidth; // force reflow so the transition triggers
+                    incoming.forEach(cell => cell.classList.remove('flat'));
+                    monthYearEl.style.opacity = '1';
+
+                    const riseTotal = sinkDuration + incoming.length * stagger;
+                    setTimeout(() => {
+                        incoming.forEach(cell => {
+                            cell.style.transitionDuration = '';
+                            cell.style.transitionDelay = '';
+                        });
+                        daysEl.style.pointerEvents = '';
+                        isAnimating = false;
+                    }, riseTotal + 60);
+                });
+            }, sinkTotal + 60);
+        }
+
+        function goToMonth(newViewDate, newSelectedDate) {
+            animateMonthChange(() => {
+                viewDate = newViewDate;
+                selectedDate = newSelectedDate;
+            });
+            updateEventPanel(newSelectedDate);
+        }
+
+        function changeMonth(delta) {
+            const target = new Date(viewDate.getFullYear(), viewDate.getMonth() + delta, 1);
+            animateMonthChange(() => {
+                viewDate = target;
+            });
+        }
+
+        function goToToday() {
+            const sameMonth = viewDate.getFullYear() === today.getFullYear() &&
+                viewDate.getMonth() === today.getMonth();
+
+            if (sameMonth) {
+                selectedDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                renderCalendar();
+                updateEventPanel();
+            } else {
+                // goToMonth already updates the event panel with the correct
+                // (new) date synchronously, before the animation runs.
+                goToMonth(
+                    new Date(today.getFullYear(), today.getMonth(), 1),
+                    new Date(today.getFullYear(), today.getMonth(), today.getDate())
+                );
+            }
+        }
+
+        // ---------- Event adder ----------
+
+        // Which row (by index in the current day's list) has its action
+        // menu open / is being edited. Reset whenever the visible day changes.
+        let openMenuIndex = null;
+        let editingIndex = null;
+
+        function updateEventPanel(overrideDate) {
+            const d = overrideDate || selectedDate || today;
+            panelDateNumEl.textContent = d.getDate();
+            panelDateDayEl.textContent = dayNamesShort[d.getDay()];
+            eventInputEl.placeholder = `Add event on ${d.getDate()} ${monthNamesShort[d.getMonth()]}`;
+            openMenuIndex = null;
+            editingIndex = null;
+            renderEventList(d);
+        }
+
+        function renderEventList(d) {
+            const key = dateKey(d);
+            const list = events[key] || [];
+            eventListEl.innerHTML = '';
+
+            const holidayName = getHolidayName(d);
+            if (holidayName) {
+                const li = document.createElement('li');
+                li.className = 'event-item holiday-item';
+
+                const dot = document.createElement('span');
+                dot.className = 'dot';
+                li.appendChild(dot);
+
+                const label = document.createElement('span');
+                label.className = 'label';
+                label.textContent = holidayName;
+                li.appendChild(label);
+
+                eventListEl.appendChild(li);
+            }
+
+            if (list.length === 0) {
+                noEventsEl.style.display = holidayName ? 'none' : 'block';
+                return;
+            }
+            noEventsEl.style.display = 'none';
+
+            list.forEach((text, index) => {
+                const li = document.createElement('li');
+                li.className = 'event-item';
+
+                const dot = document.createElement('span');
+                dot.className = 'dot';
+                li.appendChild(dot);
+
+                if (editingIndex === index) {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'label-input';
+                    input.value = text;
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') confirmItem(d, index);
+                    });
+                    li.appendChild(input);
+                } else {
+                    const label = document.createElement('span');
+                    label.className = 'label';
+                    label.textContent = text;
+                    li.appendChild(label);
+                }
+
+                const actions = document.createElement('div');
+                actions.className = 'actions';
+
+                if (openMenuIndex === index) {
+                    const editBtn = document.createElement('button');
+                    if (editingIndex === index) {
+                        editBtn.className = 'icon-btn cancel-btn';
+                        editBtn.innerHTML = '&#10005;';
+                        editBtn.title = 'Discard changes';
+                        editBtn.onclick = () => cancelEdit(d, index);
+                    } else {
+                        editBtn.className = 'icon-btn edit-btn';
+                        editBtn.innerHTML = '&#9998;';
+                        editBtn.title = 'Edit';
+                        editBtn.onclick = () => startEdit(d, index);
+                    }
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'icon-btn delete-btn';
+                    deleteBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7"/><path d="M6 7l1 13.2A1.8 1.8 0 0 0 8.8 22h6.4a1.8 1.8 0 0 0 1.8-1.8L18 7"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
+                    deleteBtn.title = 'Delete';
+                    deleteBtn.onclick = () => removeEvent(d, index);
+
+                    const confirmBtn = document.createElement('button');
+                    confirmBtn.className = 'icon-btn confirm-btn';
+                    confirmBtn.innerHTML = '&#10003;';
+                    confirmBtn.title = 'Save';
+                    confirmBtn.onclick = () => confirmItem(d, index);
+
+                    actions.appendChild(editBtn);
+                    actions.appendChild(deleteBtn);
+                    actions.appendChild(confirmBtn);
+                } else {
+                    const kebabBtn = document.createElement('button');
+                    kebabBtn.className = 'icon-btn kebab';
+                    kebabBtn.title = 'Options';
+                    for (let i = 0; i < 3; i++) {
+                        const kdot = document.createElement('span');
+                        kdot.className = 'kebab-dot';
+                        kebabBtn.appendChild(kdot);
+                    }
+                    kebabBtn.onclick = () => {
+                        openMenuIndex = index;
+                        editingIndex = null;
+                        renderEventList(d);
+                    };
+                    actions.appendChild(kebabBtn);
+                }
+
+                li.appendChild(actions);
+                eventListEl.appendChild(li);
+            });
+
+            if (editingIndex !== null) {
+                const input = eventListEl.querySelector('.label-input');
+                if (input) {
+                    input.focus();
+                    input.setSelectionRange(input.value.length, input.value.length);
+                }
+            }
+        }
+
+        function startEdit(d, index) {
+            editingIndex = index;
+            openMenuIndex = index;
+            renderEventList(d);
+        }
+
+        // Discards any typed changes and drops back to the plain pencil
+        // icon, keeping the action menu open with the original text intact.
+        function cancelEdit(d, index) {
+            editingIndex = null;
+            renderEventList(d);
+        }
+
+        // Checkmark button: saves any in-progress edit and closes the menu.
+        function confirmItem(d, index) {
+            const key = dateKey(d);
+            if (editingIndex === index) {
+                const input = eventListEl.querySelector('.label-input');
+                const newText = input ? input.value.trim() : '';
+                if (newText && events[key]) {
+                    events[key][index] = newText;
+                    saveEventsToStorage();
+                }
+            }
+            editingIndex = null;
+            openMenuIndex = null;
+            renderEventList(d);
+        }
+
+        function addEvent() {
+            const text = eventInputEl.value.trim();
+            if (!text) return;
+
+            const d = selectedDate || today;
+            const key = dateKey(d);
+            if (!events[key]) events[key] = [];
+            events[key].push(text);
+            saveEventsToStorage();
+
+            eventInputEl.value = '';
+            renderEventList(d);
+            renderCalendar(); // refresh event pip on the calendar grid
+        }
+
+        function removeEvent(d, index) {
+            const key = dateKey(d);
+            if (!events[key]) return;
+            events[key].splice(index, 1);
+            if (events[key].length === 0) delete events[key];
+            saveEventsToStorage();
+            openMenuIndex = null;
+            editingIndex = null;
+            renderEventList(d);
+            renderCalendar();
+        }
+
+        eventInputEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') addEvent();
+        });
+
+        renderCalendar();
+        updateEventPanel();
+    </script>
+</body>
+  </html>
