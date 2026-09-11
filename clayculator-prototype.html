@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Claymath — Scientific / Calculus / Discrete Calculator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.3/math.min.js"></script>
+<style>
+:root{
+  --bg1:#e9edf3;
+  --bg2:#dfe4ec;
+  --clay:#eef1f6;
+  --clay-dark:#c6cdd9;
+  --clay-light:#ffffff;
+  --ink:#3a4150;
+  --ink-soft:#7b8494;
+  --green:#3ecf6a;
+  --green-dark:#2fae56;
+  --orange:#ff9d3d;
+  --orange-dark:#f5871a;
+  --screen:#20242c;
+  --screen2:#181b21;
+  --accent:#6c8cff;
+  --danger:#ff6b6b;
+  --radius:22px;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+html,body{height:100%;}
+body{
+  margin:0;
+  min-height:100vh;
+  background:
+    radial-gradient(circle at 15% 8%, #f4f7fb 0%, transparent 45%),
+    radial-gradient(circle at 90% 90%, #dbe1ea 0%, transparent 55%),
+    linear-gradient(160deg, var(--bg1), var(--bg2));
+  font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif;
+  color:var(--ink);
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  padding:22px 12px 60px;
+}
+
+.app{
+  width:100%;
+  max-width:430px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+.brand{
+  text-align:center;
+  padding:2px 8px 0;
+}
+.brand h1{
+  font-size:1.15rem;
+  margin:0 0 2px;
+  letter-spacing:.2px;
+  font-weight:700;
+  color:var(--ink);
+}
+.brand p{
+  margin:0;
+  font-size:.75rem;
+  color:var(--ink-soft);
+}
+
+/* ---------- clay mixin-ish helpers via classes ---------- */
+.clay{
+  background:var(--clay);
+  border-radius:var(--radius);
+  box-shadow:
+    8px 8px 16px rgba(163,177,198,.55),
+    -8px -8px 16px rgba(255,255,255,.85);
+}
+.clay-inset{
+  background:var(--clay);
+  border-radius:var(--radius);
+  box-shadow:
+    inset 6px 6px 12px rgba(163,177,198,.5),
+    inset -6px -6px 12px rgba(255,255,255,.8);
+}
+
+/* ---------- calculator card ---------- */
+.calc{
+  padding:20px;
+  border-radius:34px;
+  background:var(--clay);
+  box-shadow:
+    14px 14px 30px rgba(163,177,198,.6),
+    -14px -14px 30px rgba(255,255,255,.9);
+}
+
+/* ---------- screen ---------- */
+.screen{
+  background:linear-gradient(160deg, var(--screen), var(--screen2));
+  border-radius:20px;
+  padding:14px 16px 12px;
+  box-shadow:
+    inset 4px 4px 10px rgba(0,0,0,.5),
+    inset -2px -2px 8px rgba(255,255,255,.03);
+  margin-bottom:14px;
+  position:relative;
+  overflow:hidden;
+}
+.screen-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:6px;
+}
+.mode-badge{
+  font-size:.62rem;
+  letter-spacing:.4px;
+  color:#8b93a7;
+  background:rgba(255,255,255,.05);
+  padding:3px 8px;
+  border-radius:20px;
+}
+.ans-badge{
+  font-size:.62rem;
+  color:#8b93a7;
+}
+.expr-wrap{
+  width:100%;
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+.expr-wrap::-webkit-scrollbar{display:none;}
+#expr{
+  width:100%;
+  min-width:100%;
+  background:transparent;
+  border:none;
+  outline:none;
+  color:#f4f6fb;
+  font-size:1.9rem;
+  font-family: 'Cambria Math','Latin Modern Math', Georgia, serif;
+  letter-spacing:.3px;
+  caret-color:var(--accent);
+  padding:6px 2px 2px;
+}
+#expr::placeholder{color:#565f70;}
+#expr{user-select:text; -webkit-user-select:text; -moz-user-select:text;}
+.preview-row{
+  display:flex;
+  justify-content:flex-end;
+  min-height:22px;
+  margin-top:2px;
+}
+#preview{
+  font-size:1rem;
+  color:#7fe3a4;
+  font-family: 'Cambria Math', Georgia, serif;
+  opacity:.9;
+  white-space:nowrap;
+}
+#preview.err{color:#ff8a8a; opacity:.75;}
+
+/* ---------- pages viewport ---------- */
+.viewport{
+  overflow:hidden;
+  border-radius:18px;
+  touch-action:pan-y;
+}
+.pages{
+  display:flex;
+  width:500%;
+  transition:transform .32s cubic-bezier(.22,.9,.3,1);
+}
+.page{
+  width:20%;
+  flex-shrink:0;
+  padding:8px 14px;
+}
+
+/* ---------- keypad grid ---------- */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:14px;
+}
+.grid.dense{
+  gap:10px;
+}
+.key{
+  border:none;
+  padding:0;
+  height:54px;
+  border-radius:17px;
+  font-size:1.2rem;
+  font-weight:600;
+  color:var(--ink);
+  background:var(--clay);
+  box-shadow:
+    5px 5px 10px rgba(163,177,198,.5),
+    -5px -5px 10px rgba(255,255,255,.85);
+  transition:transform .08s ease, box-shadow .08s ease;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+.grid.dense .key{
+  height:44px;
+  font-size:1rem;
+  border-radius:14px;
+}
+.grid.dense .key.tiny{
+  font-size:.58rem;
+}
+.key:active{
+  transform:scale(.94);
+  box-shadow:
+    inset 4px 4px 8px rgba(163,177,198,.55),
+    inset -4px -4px 8px rgba(255,255,255,.85);
+}
+.key.small{font-size:.95rem; font-weight:600;}
+.key.tiny{font-size:.58rem; font-weight:700; line-height:1.15; letter-spacing:.1px; padding:2px 4px;}
+.key.green{
+  background:linear-gradient(145deg, #4fe27f, var(--green));
+  color:#0d3d1f;
+  box-shadow:6px 6px 14px rgba(47,174,86,.45), -6px -6px 12px rgba(255,255,255,.5);
+}
+.key.orange{
+  background:linear-gradient(145deg, #ffb463, var(--orange));
+  color:#4a2400;
+  box-shadow:6px 6px 14px rgba(245,135,26,.4), -6px -6px 12px rgba(255,255,255,.5);
+}
+.key.blue{
+  background:linear-gradient(145deg, #91a6ff, var(--accent));
+  color:#141b40;
+  box-shadow:6px 6px 14px rgba(108,140,255,.4), -6px -6px 12px rgba(255,255,255,.5);
+}
+.key.ghost{
+  background:var(--clay);
+  color:var(--ink-soft);
+}
+.key span.sub{font-size:.6em; opacity:.75;}
+
+/* ---------- section labels within pages ---------- */
+.section-label{
+  font-size:.68rem;
+  font-weight:700;
+  letter-spacing:.3px;
+  color:var(--ink-soft);
+  margin:10px 2px 6px;
+}
+.row-tools{
+  display:flex;
+  gap:8px;
+  margin-bottom:10px;
+}
+.tool-input{
+  flex:1;
+  border:none;
+  outline:none;
+  border-radius:14px;
+  padding:10px 12px;
+  font-size:.85rem;
+  background:var(--clay);
+  color:var(--ink);
+  box-shadow:inset 4px 4px 8px rgba(163,177,198,.45), inset -4px -4px 8px rgba(255,255,255,.8);
+}
+select.tool-input{appearance:none;}
+.run-btn{
+  border:none;
+  border-radius:14px;
+  padding:10px 16px;
+  font-size:.82rem;
+  font-weight:700;
+  color:#0d3d1f;
+  background:linear-gradient(145deg, #4fe27f, var(--green));
+  box-shadow:4px 4px 10px rgba(47,174,86,.4), -4px -4px 8px rgba(255,255,255,.5);
+  cursor:pointer;
+}
+.output-box{
+  min-height:70px;
+  max-height:190px;
+  overflow:auto;
+  border-radius:16px;
+  padding:12px;
+  font-size:.82rem;
+  line-height:1.5;
+  white-space:pre-wrap;
+  word-break:break-word;
+  color:var(--ink);
+  background:var(--clay);
+  box-shadow:inset 4px 4px 8px rgba(163,177,198,.45), inset -4px -4px 8px rgba(255,255,255,.8);
+}
+.mini-table{border-collapse:collapse; font-size:.72rem;}
+.mini-table td,.mini-table th{border:1px solid #c6cdd9; padding:3px 6px; text-align:center;}
+canvas#plotCanvas{
+  width:100%;
+  height:150px;
+  border-radius:16px;
+  background:var(--clay);
+  box-shadow:inset 4px 4px 8px rgba(163,177,198,.45), inset -4px -4px 8px rgba(255,255,255,.8);
+  margin-top:8px;
+}
+
+/* ---------- symbols page ---------- */
+.sym-grid{
+  display:grid;
+  grid-template-columns:repeat(6, 1fr);
+  gap:9px;
+}
+.sym-grid .key{height:42px; font-size:.98rem; border-radius:13px;}
+.sym-grid .key.tiny{font-size:.52rem; line-height:1.1; padding:2px 3px;}
+
+/* ---------- pagination ---------- */
+.pager{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:14px;
+  background:linear-gradient(160deg, var(--screen), var(--screen2));
+  border-radius:20px;
+  padding:10px 14px;
+  box-shadow:inset 3px 3px 8px rgba(0,0,0,.5);
+}
+.nav-arrow{
+  width:34px;height:34px;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  color:#cfd6e4;
+  background:rgba(255,255,255,.06);
+  cursor:pointer;
+  font-size:1rem;
+  flex-shrink:0;
+}
+.dots-scrub{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+  touch-action:none;
+  cursor:grab;
+  padding:6px 0;
+}
+.dots{
+  display:flex;
+  gap:9px;
+}
+.dot{
+  width:7px;height:7px;border-radius:50%;
+  background:#4b5364;
+  transition:all .25s ease;
+}
+.dot.active{
+  width:20px;
+  background:var(--accent);
+}
+.page-labels{
+  display:flex;
+  gap:16px;
+  font-size:.6rem;
+  color:#5b6376;
+}
+.page-labels span.active{color:#cfd6e4; font-weight:700;}
+
+footer{
+  text-align:center;
+  font-size:.68rem;
+  color:var(--ink-soft);
+  padding-top:4px;
+}
+
+/* ---------- key label sizing helper (font-only, no layout change) ---------- */
+.key{
+  line-height:1.1;
+  white-space:normal;
+  overflow-wrap:break-word;
+}
+.key > * { pointer-events:none; }
+
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="brand">
+    <h1>Claymath</h1>
+    <p>scientific · calculus · discrete · graphs</p>
+  </div>
+
+  <div class="calc">
+
+    <div class="screen">
+      <div class="screen-top">
+        <span class="mode-badge" id="modeBadge">BASIC</span>
+        <span class="mode-badge" id="angleToggle" style="cursor:pointer;">RAD</span>
+        <span class="ans-badge" id="ansBadge">ans = 0</span>
+      </div>
+      <div class="expr-wrap">
+        <input id="expr" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="0" />
+      </div>
+      <div class="preview-row"><div id="preview"></div></div>
+    </div>
+
+    <div class="viewport">
+      <div class="pages" id="pages">
+
+        <!-- PAGE 0 — BASIC -->
+        <div class="page">
+          <div class="grid dense">
+            <button class="key green" data-ins="§CLR">C</button>
+            <button class="key ghost" data-ins="(">(</button>
+            <button class="key ghost" data-ins=")">)</button>
+            <button class="key orange" data-ins="/">÷</button>
+
+            <button class="key" data-ins="7">7</button>
+            <button class="key" data-ins="8">8</button>
+            <button class="key" data-ins="9">9</button>
+            <button class="key orange" data-ins="*">×</button>
+
+            <button class="key" data-ins="4">4</button>
+            <button class="key" data-ins="5">5</button>
+            <button class="key" data-ins="6">6</button>
+            <button class="key orange" data-ins="-">−</button>
+
+            <button class="key" data-ins="1">1</button>
+            <button class="key" data-ins="2">2</button>
+            <button class="key" data-ins="3">3</button>
+            <button class="key orange" data-ins="+">+</button>
+
+            <button class="key ghost" data-ins="§DEL">⌫</button>
+            <button class="key" data-ins="0">0</button>
+            <button class="key ghost" data-ins=".">.</button>
+            <button class="key green" data-ins="§EQ">=</button>
+          </div>
+        </div>
+
+        <!-- PAGE 1 — SCIENTIFIC -->
+        <div class="page">
+          <div class="grid dense">
+            <button class="key small" data-ins="sin(§)">sin</button>
+            <button class="key small" data-ins="cos(§)">cos</button>
+            <button class="key small" data-ins="tan(§)">tan</button>
+            <button class="key small" data-ins="^(§)">x^y</button>
+
+            <button class="key small" data-ins="asin(§)">sin⁻¹</button>
+            <button class="key small" data-ins="acos(§)">cos⁻¹</button>
+            <button class="key small" data-ins="atan(§)">tan⁻¹</button>
+            <button class="key small" data-ins="sqrt(§)">√</button>
+
+            <button class="key small" data-ins="sinh(§)">sinh</button>
+            <button class="key small" data-ins="cosh(§)">cosh</button>
+            <button class="key small" data-ins="tanh(§)">tanh</button>
+            <button class="key small" data-ins="cbrt(§)">∛</button>
+
+            <button class="key small" data-ins="log10(§)">log</button>
+            <button class="key small" data-ins="log(§)">ln</button>
+            <button class="key small" data-ins="log(§,§)">logₙ</button>
+            <button class="key small" data-ins="exp(§)">eˣ</button>
+
+            <button class="key small" data-ins="pi">π</button>
+            <button class="key small" data-ins="e">e</button>
+            <button class="key small" data-ins="i">i</button>
+            <button class="key small" data-ins="abs(§)">|x|</button>
+
+            <button class="key orange" data-ins="^2§">x²</button>
+            <button class="key orange" data-ins="%">%</button>
+            <button class="key orange" data-ins="!">n!</button>
+            <button class="key green" data-ins="§EQ">=</button>
+          </div>
+        </div>
+
+        <!-- PAGE 2 — CALCULUS -->
+        <div class="page">
+          <div class="section-label">calculus toolbox — tap to insert a template, fill in the blanks, then press =</div>
+          <div class="grid dense">
+            <button class="key tiny" data-ins="derivative(§,x)">d/dx</button>
+            <button class="key tiny" data-ins="derivative(§,y)">∂/∂y</button>
+            <button class="key tiny" data-ins="d2dx2(§)">d²/dx²</button>
+            <button class="key tiny" data-ins="taylor(§,x,0,5)">taylor</button>
+
+            <button class="key tiny" data-ins="integrate(§,x,0,1)">∫ dx (a,b)</button>
+            <button class="key tiny" data-ins="antideriv(§,x)">∫ dx (sym)</button>
+            <button class="key tiny" data-ins="limit(§,x,0)">lim x→a</button>
+            <button class="key tiny" data-ins="limit(§,x,Infinity)">lim x→∞</button>
+
+            <button class="key tiny" data-ins="sum(§,x,1,10)">Σ sum</button>
+            <button class="key tiny" data-ins="prod(§,x,1,10)">∏ prod</button>
+            <button class="key tiny" data-ins="x">x</button>
+            <button class="key tiny" data-ins="y">y</button>
+
+            <button class="key ghost" data-ins="(">(</button>
+            <button class="key ghost" data-ins=")">)</button>
+            <button class="key ghost" data-ins=",">,</button>
+            <button class="key orange" data-ins="^(§)">^</button>
+          </div>
+          <div class="section-label">plot f(x)</div>
+          <div class="row-tools">
+            <button class="run-btn" id="plotBtn" style="flex:1;">Plot current expression</button>
+          </div>
+          <canvas id="plotCanvas" width="600" height="300"></canvas>
+        </div>
+
+        <!-- PAGE 3 — DISCRETE / GRAPH THEORY -->
+        <div class="page">
+          <div class="section-label">discrete math</div>
+          <div class="grid">
+            <button class="key tiny" data-ins="combinations(§,§)">nCr</button>
+            <button class="key tiny" data-ins="permutations(§,§)">nPr</button>
+            <button class="key tiny" data-ins="gcd(§,§)">gcd</button>
+            <button class="key tiny" data-ins="lcm(§,§)">lcm</button>
+
+            <button class="key tiny" data-ins="mod(§,§)">mod</button>
+            <button class="key tiny" data-ins="isPrime(§)">isPrime</button>
+            <button class="key tiny" data-ins="floor(§)">floor</button>
+            <button class="key tiny" data-ins="ceil(§)">ceil</button>
+
+            <button class="key tiny" data-ins="setUnion(§,§)">A∪B</button>
+            <button class="key tiny" data-ins="setIntersect(§,§)">A∩B</button>
+            <button class="key tiny" data-ins="setDifference(§,§)">A\B</button>
+            <button class="key tiny" data-ins="setIsSubset(§,§)">A⊆B</button>
+
+            <button class="key ghost" data-ins="[">[</button>
+            <button class="key ghost" data-ins="]">]</button>
+            <button class="key ghost" data-ins=",">,</button>
+            <button class="key orange" data-ins="!">!</button>
+          </div>
+
+          <div class="section-label">graph theory workbench</div>
+          <div class="row-tools">
+            <input class="tool-input" id="graphEdges" placeholder="edges e.g. A-B,B-C,C-A,C-D" style="flex:2;">
+          </div>
+          <div class="row-tools">
+            <select class="tool-input" id="graphOp">
+              <option value="summary">Vertices &amp; edges</option>
+              <option value="degree">Degree sequence</option>
+              <option value="adj">Adjacency matrix</option>
+              <option value="connected">Connected?</option>
+              <option value="euler">Eulerian path / circuit?</option>
+              <option value="cycle">Contains a cycle?</option>
+              <option value="path">Shortest path A→B</option>
+            </select>
+          </div>
+          <div class="row-tools" id="pathRow" style="display:none;">
+            <input class="tool-input" id="pathFrom" placeholder="from node">
+            <input class="tool-input" id="pathTo" placeholder="to node">
+          </div>
+          <div class="row-tools">
+            <button class="run-btn" id="graphRun" style="flex:1;">Compute</button>
+          </div>
+          <div class="output-box" id="graphOut">Build a graph above — result appears here.</div>
+        </div>
+
+        <!-- PAGE 4 — SYMBOLS / KEYBOARD -->
+        <div class="page">
+          <div class="section-label">symbols &amp; variables</div>
+          <div class="sym-grid">
+            <button class="key" data-ins="π">π</button>
+            <button class="key" data-ins="e">e</button>
+            <button class="key" data-ins="i">i</button>
+            <button class="key" data-ins="∞">∞</button>
+            <button class="key" data-ins="θ">θ</button>
+            <button class="key" data-ins="φ">φ</button>
+
+            <button class="key" data-ins="α">α</button>
+            <button class="key" data-ins="β">β</button>
+            <button class="key" data-ins="λ">λ</button>
+            <button class="key" data-ins="μ">μ</button>
+            <button class="key" data-ins="σ">σ</button>
+            <button class="key" data-ins="Δ">Δ</button>
+
+            <button class="key" data-ins="x">x</button>
+            <button class="key" data-ins="y">y</button>
+            <button class="key" data-ins="z">z</button>
+            <button class="key" data-ins="n">n</button>
+            <button class="key" data-ins="t">t</button>
+            <button class="key" data-ins="k">k</button>
+
+            <button class="key" data-ins="√(§)">√(</button>
+            <button class="key" data-ins="∛(§)">∛(</button>
+            <button class="key" data-ins="^(§)">^(</button>
+            <button class="key" data-ins="abs(§)">| |</button>
+            <button class="key" data-ins="°">°</button>
+            <button class="key" data-ins="%">%</button>
+
+            <button class="key" data-ins="≤">≤</button>
+            <button class="key" data-ins="≥">≥</button>
+            <button class="key" data-ins="≠">≠</button>
+            <button class="key" data-ins="≈">≈</button>
+            <button class="key" data-ins="→">→</button>
+            <button class="key" data-ins="∈">∈</button>
+
+            <button class="key" data-ins="∪">∪</button>
+            <button class="key" data-ins="∩">∩</button>
+            <button class="key" data-ins="⊆">⊆</button>
+            <button class="key" data-ins="{§}">{ }</button>
+            <button class="key" data-ins="[§]">[ ]</button>
+            <button class="key" data-ins="(§)">( )</button>
+
+            <button class="key" data-ins="Σ(§)">Σ</button>
+            <button class="key" data-ins="∏(§)">∏</button>
+            <button class="key" data-ins="∂(§)">∂</button>
+            <button class="key" data-ins="∫(§)">∫</button>
+            <button class="key" data-ins="ans">ans</button>
+            <button class="key ghost ctl" data-ins="§DEL">⌫</button>
+
+            <button class="key ghost tiny" data-ins="§LEFT">◀ move</button>
+            <button class="key ghost tiny" data-ins="§RIGHT">move ▶</button>
+            <button class="key green" style="grid-column: span 2;" data-ins="§EQ">= evaluate</button>
+            <button class="key green ctl" style="grid-column: span 2;" data-ins="§CLR">C clear</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="pager" id="pager">
+      <div class="nav-arrow" id="prevArrow">‹</div>
+      <div class="dots-scrub" id="dotsScrub">
+        <div class="dots" id="dots">
+          <span class="dot active" data-i="0"></span>
+          <span class="dot" data-i="1"></span>
+          <span class="dot" data-i="2"></span>
+          <span class="dot" data-i="3"></span>
+          <span class="dot" data-i="4"></span>
+        </div>
+        <div class="page-labels" id="pageLabels">
+          <span class="active">basic</span><span>sci</span><span>calc</span><span>discrete</span><span>keys</span>
+        </div>
+      </div>
+      <div class="nav-arrow" id="nextArrow">›</div>
+    </div>
+
+  </div>
+
+  <footer>swipe the calculator, or drag the dots below the screen, to change pages</footer>
+</div>
+
+
+<script>
+/* ============================================================
+   MATH ENGINE SETUP
+   ============================================================ */
+const mj = math.create(math.all);
+
+mj.import({
+  isPrime: function(n){
+    n = Number(n);
+    if (!Number.isInteger(n) || n < 2) return false;
+    if (n % 2 === 0) return n === 2;
+    for (let i = 3; i*i <= n; i += 2) if (n % i === 0) return false;
+    return true;
+  },
+  deg: function(x){ return x * Math.PI / 180; },
+  rad: function(x){ return x * 180 / Math.PI; }
+}, { override: true });
+
+let angleMode = 'rad'; // 'rad' | 'deg'
+const _sin = mj.sin, _cos = mj.cos, _tan = mj.tan, _asin = mj.asin, _acos = mj.acos, _atan = mj.atan;
+function toRadIfDeg(x){ return (typeof x === 'number' && angleMode === 'deg') ? x * Math.PI / 180 : x; }
+function fromRadIfDeg(x){ return (typeof x === 'number' && angleMode === 'deg') ? x * 180 / Math.PI : x; }
+mj.import({
+  sin: (x)=> _sin(toRadIfDeg(x)),
+  cos: (x)=> _cos(toRadIfDeg(x)),
+  tan: (x)=> _tan(toRadIfDeg(x)),
+  asin: (x)=> fromRadIfDeg(_asin(x)),
+  acos: (x)=> fromRadIfDeg(_acos(x)),
+  atan: (x)=> fromRadIfDeg(_atan(x))
+}, { override: true });
+
+let lastAns = 0;
+
+/* ---- top-level comma splitter (respects nested parens/brackets) ---- */
+function splitTopLevel(str){
+  const parts = [];
+  let depth = 0, cur = '';
+  for (const ch of str){
+    if (ch === '(' || ch === '[' || ch === '{') depth++;
+    if (ch === ')' || ch === ']' || ch === '}') depth--;
+    if (ch === ',' && depth === 0){ parts.push(cur); cur=''; }
+    else cur += ch;
+  }
+  parts.push(cur);
+  return parts.map(s => s.trim());
+}
+
+function wrapperArgs(text, name){
+  const re = new RegExp('^' + name + '\\s*\\(');
+  if (!re.test(text)) return null;
+  if (text[text.length-1] !== ')') return null;
+  const inner = text.slice(text.indexOf('(') + 1, text.length - 1);
+  return splitTopLevel(inner);
+}
+
+/* ---- symbol preprocessing: pretty unicode -> math.js syntax ---- */
+function preprocess(raw){
+  let t = raw;
+  t = t.replace(/(\d+(\.\d+)?)\s*°/g, '($1*pi/180)');
+  t = t.replace(/°/g, '');
+  t = t.replace(/π/g, 'pi');
+  t = t.replace(/∞/g, 'Infinity');
+  t = t.replace(/√/g, 'sqrt');
+  t = t.replace(/∛/g, 'cbrt');
+  t = t.replace(/≤/g, '<=').replace(/≥/g, '>=').replace(/≠/g, '!=').replace(/≈/g, '==');
+  t = t.replace(/\{/g, '[').replace(/\}/g, ']');
+  t = t.replace(/Σ\(/g, 'sum(').replace(/∏\(/g, 'prod(');
+  t = t.replace(/∂\(/g, 'derivative(');
+  t = t.replace(/∫\(/g, 'antideriv(');
+  return t;
+}
+
+/* ---- numeric helpers for calculus intercepts ---- */
+function compileScoped(exprStr, varName, val){
+  const scope = { ans: lastAns };
+  scope[varName] = val;
+  return mj.evaluate(exprStr, scope);
+}
+
+function simpsonIntegral(exprStr, varName, a, b, n){
+  n = n && n % 2 === 0 ? n : 200;
+  const h = (b - a) / n;
+  let s = compileScoped(exprStr, varName, a) + compileScoped(exprStr, varName, b);
+  for (let i = 1; i < n; i++){
+    const x = a + i*h;
+    const val = compileScoped(exprStr, varName, x);
+    s += (i % 2 === 0 ? 2 : 4) * val;
+  }
+  return s * h / 3;
+}
+
+function numericLimit(exprStr, varName, a){
+  const tryPoint = (h) => {
+    try { return compileScoped(exprStr, varName, a + h); } catch(e){ return NaN; }
+  };
+  if (a === Infinity) {
+    const v1 = tryPoint(1e6), v2 = tryPoint(1e7);
+    return v2;
+  }
+  if (a === -Infinity) {
+    const v1 = tryPoint(-1e6), v2 = tryPoint(-1e7);
+    return v2;
+  }
+  const hs = [1e-2, 1e-4, 1e-6];
+  let right = [], left = [];
+  hs.forEach(h => { right.push(tryPoint(h)); left.push(tryPoint(-h)); });
+  const r = right[right.length-1], l = left[left.length-1];
+  return { left: l, right: r, value: (Math.abs(r-l) < 1e-3 || (typeof r === 'object')) ? r : NaN };
+}
+
+/* ---- very small symbolic term-wise antiderivative (best effort) ---- */
+function antiderivativeString(exprStr, varName){
+  try {
+    const node = mj.parse(exprStr);
+    const simplified = mj.simplify(node);
+    const terms = flattenSum(simplified);
+    const pieces = terms.map(t => integrateTerm(t, varName));
+    if (pieces.some(p => p === null)) return null;
+    const joined = pieces.join(' + ').replace(/\+ -/g, '- ');
+    return mj.simplify(joined).toString() + ' + C';
+  } catch(e){ return null; }
+}
+function flattenSum(node){
+  const out = [];
+  (function walk(n, sign){
+    if (n.type === 'OperatorNode' && n.op === '+' && n.fn === 'add'){
+      walk(n.args[0], sign); walk(n.args[1], sign);
+    } else if (n.type === 'OperatorNode' && n.op === '-' && n.fn === 'subtract'){
+      walk(n.args[0], sign); walk(n.args[1], !sign);
+    } else if (n.type === 'OperatorNode' && n.op === '-' && n.fn === 'unaryMinus'){
+      walk(n.args[0], !sign);
+    } else {
+      out.push(sign ? new math.OperatorNode('-','unaryMinus',[n]) : n);
+    }
+  })(node, false);
+  return out;
+}
+function integrateTerm(node, v){
+  try {
+    const s = node.toString({parenthesis:'auto'});
+    // constant
+    if (!s.includes(v)) return `(${s})*${v}`;
+    // v itself
+    if (s === v) return `${v}^2/2`;
+    // c*v^n  or v^n
+    let m = s.match(new RegExp('^\\(?(-?[0-9.]*)\\)?\\*?' + v + '\\^\\(?(-?[0-9.]+)\\)?$'));
+    if (m){
+      const c = m[1] === '' || m[1] === '-' ? (m[1]==='-'?-1:1) : parseFloat(m[1]);
+      const n = parseFloat(m[2]);
+      if (n === -1) return `${c}*log(${v})`;
+      return `(${c}/${n+1})*${v}^${n+1}`;
+    }
+    // c*v
+    m = s.match(new RegExp('^\\(?(-?[0-9.]+)\\)?\\*' + v + '$'));
+    if (m) return `(${parseFloat(m[1])}/2)*${v}^2`;
+    // 1/v
+    if (s === `1/${v}` || s === `${v}^(-1)`) return `log(${v})`;
+    // sin/cos/exp
+    if (s === `sin(${v})`) return `-cos(${v})`;
+    if (s === `cos(${v})`) return `sin(${v})`;
+    if (s === `exp(${v})`) return `exp(${v})`;
+    let mc = s.match(new RegExp('^\\(?(-?[0-9.]+)\\)?\\*sin\\(' + v + '\\)$'));
+    if (mc) return `${-1*parseFloat(mc[1])}*cos(${v})`;
+    mc = s.match(new RegExp('^\\(?(-?[0-9.]+)\\)?\\*cos\\(' + v + '\\)$'));
+    if (mc) return `${parseFloat(mc[1])}*sin(${v})`;
+    return null;
+  } catch(e){ return null; }
+}
+
+/* ---- taylor series builder ---- */
+function taylorString(exprStr, v, a, order){
+  let f = mj.parse(exprStr);
+  let terms = [];
+  const fac = (k)=> k<=1?1: k*fac(k-1);
+  let current = f;
+  for (let k=0; k<=order; k++){
+    let val;
+    try { val = compileScoped(current.toString(), v, a); } catch(e){ val = NaN; }
+    if (typeof val === 'number' && !isNaN(val) && Math.abs(val) > 1e-12){
+      const coeff = val / fac(k);
+      if (k === 0) terms.push(`(${round(coeff,6)})`);
+      else terms.push(`(${round(coeff,6)})*(${v}-(${a}))^${k}`);
+    }
+    if (k < order) current = mj.derivative(current, v);
+  }
+  if (terms.length === 0) return '0';
+  return terms.join(' + ').replace(/\+ \(-/g, '- (');
+}
+function round(x, d){ const p = Math.pow(10,d); return Math.round(x*p)/p; }
+
+/* ---- master dispatcher ---- */
+function evaluateExpression(raw){
+  const text = preprocess(raw.trim());
+  if (text === '') return { value: '', display: '' };
+
+  let args;
+  if ((args = wrapperArgs(text, 'integrate')) && args.length === 4){
+    const [e,v,a,b] = args;
+    const av = mj.evaluate(a, {ans:lastAns}), bv = mj.evaluate(b, {ans:lastAns});
+    const res = simpsonIntegral(e, v, av, bv);
+    return { value: res, display: `∫[${a}→${b}] = ${formatVal(res)}` };
+  }
+  if ((args = wrapperArgs(text, 'd2dx2')) && args.length >= 1){
+    const v = args[1] || 'x';
+    try{
+      const d1 = mj.derivative(args[0], v);
+      const d2 = mj.derivative(d1, v);
+      const s = d2.toString();
+      return { value: s, display: s, isText: true };
+    }catch(err){
+      return { value: null, display: 'could not compute second derivative: ' + (err.message||''), isText:true, isErr:true };
+    }
+  }
+  if ((args = wrapperArgs(text, 'antideriv')) && args.length >= 1){
+    const v = args[1] || 'x';
+    const sym = antiderivativeString(args[0], v);
+    if (sym) return { value: sym, display: sym, isText:true };
+    return { value: null, display: 'no simple antiderivative found — try the definite integral ∫[a→b] instead', isText:true, isErr:true };
+  }
+  if ((args = wrapperArgs(text, 'limit')) && args.length >= 2){
+    const v = args[1], a = args.length>2 ? mj.evaluate(args[2],{ans:lastAns}) : 0;
+    const res = numericLimit(args[0], v, a);
+    if (typeof res === 'object' && res !== null && 'value' in res){
+      const disp = isNaN(res.value) ? `left≈${formatVal(res.left)}, right≈${formatVal(res.right)} (limit may not exist)` : formatVal(res.value);
+      return { value: res.value, display: `lim = ${disp}`, isText: isNaN(res.value) };
+    }
+    return { value: res, display: `lim = ${formatVal(res)}` };
+  }
+  if ((args = wrapperArgs(text, 'sum')) && args.length === 4){
+    const [e,v,a,b] = args;
+    const av = Math.round(mj.evaluate(a,{ans:lastAns})), bv = Math.round(mj.evaluate(b,{ans:lastAns}));
+    let s = 0;
+    for (let x=av; x<=bv; x++) s = mj.add(s, compileScoped(e, v, x));
+    return { value: s, display: `Σ = ${formatVal(s)}` };
+  }
+  if ((args = wrapperArgs(text, 'prod')) && args.length === 4){
+    const [e,v,a,b] = args;
+    const av = Math.round(mj.evaluate(a,{ans:lastAns})), bv = Math.round(mj.evaluate(b,{ans:lastAns}));
+    let p = 1;
+    for (let x=av; x<=bv; x++) p = mj.multiply(p, compileScoped(e, v, x));
+    return { value: p, display: `∏ = ${formatVal(p)}` };
+  }
+  if ((args = wrapperArgs(text, 'taylor')) && args.length === 4){
+    const [e,v,a,n] = args;
+    const av = mj.evaluate(a,{ans:lastAns}), nv = Math.round(mj.evaluate(n,{ans:lastAns}));
+    const s = taylorString(e, v, av, nv);
+    return { value: s, display: s, isText:true };
+  }
+
+  // plain evaluate (also naturally covers derivative(...) since math.js supports it)
+  const result = mj.evaluate(text, { ans: lastAns });
+  return { value: result, display: formatVal(result) };
+}
+
+function formatVal(v){
+  if (v === undefined || v === null) return '';
+  if (typeof v === 'number'){
+    if (!isFinite(v)) return v > 0 ? '∞' : '-∞';
+    if (Number.isInteger(v)) return v.toString();
+    return mj.format(v, { precision: 10 });
+  }
+  if (v && v.isComplex) return mj.format(v, { precision: 8 });
+  if (Array.isArray(v) || (v && v.isMatrix)) return mj.format(v, { precision: 8 });
+  if (v && v.toString) {
+    try { return v.toString(); } catch(e){ return String(v); }
+  }
+  return String(v);
+}
+
+/* ============================================================
+   DISPLAY / CURSOR LOGIC
+   ============================================================ */
+const exprEl = document.getElementById('expr');
+const previewEl = document.getElementById('preview');
+const ansBadge = document.getElementById('ansBadge');
+
+/* Internal cursor tracker — the source of truth for where edits happen.
+   We DON'T rely on exprEl.selectionStart/selectionEnd once the input is
+   blurred: some mobile browsers stop reporting the real caret position
+   for an unfocused input (this is what caused backspace to work once,
+   then get stuck — it kept reading a stale/reset position). Instead we
+   track the position ourselves and re-sync it from the DOM only when
+   the person actually taps/types into the field directly. */
+let curPos = 0;
+let curEnd = 0;
+
+function syncCursorFromDOM(){
+  const s = exprEl.selectionStart;
+  const e = exprEl.selectionEnd;
+  curPos = (s == null) ? exprEl.value.length : s;
+  curEnd = (e == null) ? curPos : e;
+}
+exprEl.addEventListener('focus', ()=> setTimeout(syncCursorFromDOM, 0));
+exprEl.addEventListener('click', ()=> setTimeout(syncCursorFromDOM, 0));
+exprEl.addEventListener('keyup', syncCursorFromDOM);
+exprEl.addEventListener('input', syncCursorFromDOM);
+
+function setCursor(pos, end){
+  curPos = pos;
+  curEnd = (end === undefined) ? pos : end;
+  /* best-effort visual sync — harmless if the input happens to be
+     unfocused, but keeps the caret right if it's focused */
+  try{ exprEl.setSelectionRange(curPos, curEnd); }catch(e){}
+}
+
+/* NOTE: none of these branches call exprEl.focus(). Keeping the input
+   unfocused during keypad taps is what stops the mobile keyboard from
+   popping up on every button press — the keyboard should only appear
+   when the person taps directly into the screen/input itself. Cursor
+   position for inserts/deletes/move is tracked internally (see above)
+   so it keeps working correctly no matter how many times it's pressed. */
+function insertTemplate(tpl){
+  if (tpl === '§CLR'){ exprEl.value=''; setCursor(0); updatePreview(); return; }
+  if (tpl === '§DEL'){
+    const s = curPos, e = curEnd;
+    if (s !== e){ exprEl.value = exprEl.value.slice(0,s) + exprEl.value.slice(e); setCursor(s); }
+    else if (s > 0){ exprEl.value = exprEl.value.slice(0,s-1) + exprEl.value.slice(s); setCursor(s-1); }
+    updatePreview(); return;
+  }
+  if (tpl === '§LEFT'){ const p = Math.max(0, curPos-1); setCursor(p); return; }
+  if (tpl === '§RIGHT'){ const p = Math.min(exprEl.value.length, curPos+1); setCursor(p); return; }
+  if (tpl === '§EQ'){ doEvaluate(); return; }
+
+  const markerIdx = tpl.indexOf('§');
+  const text = tpl.replace('§','');
+  const start = curPos, end = curEnd;
+  const before = exprEl.value.slice(0,start), after = exprEl.value.slice(end);
+  exprEl.value = before + text + after;
+  const newPos = start + (markerIdx === -1 ? text.length : markerIdx);
+  setCursor(newPos);
+  updatePreview();
+}
+
+document.querySelectorAll('.key[data-ins]').forEach(btn=>{
+  btn.addEventListener('click', ()=> insertTemplate(btn.dataset.ins));
+});
+
+function updatePreview(){
+  shrinkToFit();
+  const raw = exprEl.value;
+  if (!raw.trim()){ previewEl.textContent=''; previewEl.classList.remove('err'); return; }
+  try{
+    const r = evaluateExpression(raw);
+    previewEl.classList.remove('err');
+    previewEl.textContent = r.isText ? '' : ('= ' + r.display);
+  }catch(e){
+    previewEl.classList.remove('err');
+    previewEl.textContent = '';
+  }
+}
+
+/* ============================================================
+   EVALUATE — pressing "=" puts the RESULT directly on the main
+   screen (replacing the expression), the same way a normal
+   calculator works. The result sits in the same #expr input, so
+   it's natively selectable/copyable by a long-press, and typing
+   right after it continues the calculation from that value.
+   ============================================================ */
+function doEvaluate(){
+  const raw = exprEl.value;
+  if (!raw.trim()) return;
+  try{
+    const r = evaluateExpression(raw);
+    if (r.isErr){
+      previewEl.classList.add('err');
+      previewEl.textContent = r.display;
+      return;
+    }
+    previewEl.classList.remove('err');
+    previewEl.textContent = '';
+    if (typeof r.value === 'number' && isFinite(r.value)) lastAns = r.value;
+    ansBadge.textContent = 'ans = ' + (typeof r.value==='number' ? formatVal(r.value) : r.display);
+    exprEl.value = r.display;
+    shrinkToFit();
+    setCursor(exprEl.value.length);
+  }catch(e){
+    previewEl.classList.add('err');
+    previewEl.textContent = 'error: ' + (e.message || 'invalid expression');
+  }
+}
+
+function shrinkToFit(){
+  exprEl.style.fontSize = '1.9rem';
+  let size = 1.9;
+  let guard = 0;
+  while (exprEl.scrollWidth > exprEl.clientWidth + 4 && size > 0.9 && guard < 20){
+    size -= 0.08;
+    exprEl.style.fontSize = size + 'rem';
+    guard++;
+  }
+}
+
+document.getElementById('angleToggle').addEventListener('click', ()=>{
+  angleMode = angleMode === 'rad' ? 'deg' : 'rad';
+  document.getElementById('angleToggle').textContent = angleMode.toUpperCase();
+  updatePreview();
+});
+
+exprEl.addEventListener('input', ()=>{ updatePreview(); });
+
+/* also allow physical/mobile keyboard typing directly */
+exprEl.addEventListener('keydown', (e)=>{
+  if (e.key === 'Enter'){ e.preventDefault(); doEvaluate(); }
+});
+
+/* ============================================================
+   PAGE SWIPE + DRAGGABLE DOT PAGINATION  (instagram style)
+   ============================================================ */
+const pagesEl = document.getElementById('pages');
+const viewport = document.querySelector('.viewport');
+const dotsEl = document.getElementById('dots');
+const pageLabelsEl = document.getElementById('pageLabels');
+const PAGE_COUNT = 5;
+let currentPage = 0;
+
+function renderPage(animate=true){
+  pagesEl.style.transition = animate ? 'transform .32s cubic-bezier(.22,.9,.3,1)' : 'none';
+  pagesEl.style.transform = `translateX(-${currentPage * (100/PAGE_COUNT)}%)`;
+  [...dotsEl.children].forEach((d,i)=> d.classList.toggle('active', i===currentPage));
+  [...pageLabelsEl.children].forEach((d,i)=> d.classList.toggle('active', i===currentPage));
+  const modeNames = ['BASIC','SCIENTIFIC','CALCULUS','DISCRETE / GRAPH','SYMBOLS'];
+  document.getElementById('modeBadge').textContent = modeNames[currentPage];
+}
+function goToPage(i){
+  currentPage = Math.max(0, Math.min(PAGE_COUNT-1, i));
+  renderPage(true);
+}
+
+/* swipe on the calculator body itself */
+let swipeStartX=null, swipeDelta=0, swiping=false;
+viewport.addEventListener('pointerdown', (e)=>{
+  swiping = true; swipeStartX = e.clientX; swipeDelta = 0;
+  pagesEl.style.transition = 'none';
+  viewport.setPointerCapture(e.pointerId);
+});
+viewport.addEventListener('pointermove', (e)=>{
+  if (!swiping) return;
+  swipeDelta = e.clientX - swipeStartX;
+  const basePct = -(currentPage * (100/PAGE_COUNT));
+  const dragPct = (swipeDelta / viewport.clientWidth) * (100/PAGE_COUNT);
+  pagesEl.style.transform = `translateX(${basePct + dragPct}%)`;
+});
+function endSwipe(){
+  if (!swiping) return;
+  swiping = false;
+  const threshold = viewport.clientWidth * 0.15;
+  if (swipeDelta < -threshold && currentPage < PAGE_COUNT-1) currentPage++;
+  else if (swipeDelta > threshold && currentPage > 0) currentPage--;
+  swipeDelta = 0;
+  renderPage(true);
+}
+viewport.addEventListener('pointerup', endSwipe);
+viewport.addEventListener('pointercancel', endSwipe);
+
+/* draggable dots scrub bar — instagram-post style */
+const dotsScrub = document.getElementById('dotsScrub');
+let dotDragging=false, dotStartX=0, dotBaseline=0;
+dotsScrub.addEventListener('pointerdown', (e)=>{
+  dotDragging = true; dotStartX = e.clientX; dotBaseline = currentPage;
+  dotsScrub.setPointerCapture(e.pointerId);
+});
+dotsScrub.addEventListener('pointermove', (e)=>{
+  if (!dotDragging) return;
+  const delta = e.clientX - dotStartX;
+  const step = 34;
+  const shift = Math.round(-delta/step);
+  const np = Math.max(0, Math.min(PAGE_COUNT-1, dotBaseline + shift));
+  if (np !== currentPage){ currentPage = np; renderPage(true); }
+});
+dotsScrub.addEventListener('pointerup', ()=> dotDragging=false);
+dotsScrub.addEventListener('pointercancel', ()=> dotDragging=false);
+
+document.querySelectorAll('.dot').forEach(d=>{
+  d.addEventListener('click', ()=> goToPage(parseInt(d.dataset.i,10)));
+});
+document.getElementById('prevArrow').addEventListener('click', ()=> goToPage(currentPage-1));
+document.getElementById('nextArrow').addEventListener('click', ()=> goToPage(currentPage+1));
+
+renderPage(false);
+
+
+/* ============================================================
+   PLOT (calculus page)
+   ============================================================ */
+document.getElementById('plotBtn').addEventListener('click', ()=>{
+  const canvas = document.getElementById('plotCanvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--clay');
+  ctx.fillRect(0,0,w,h);
+
+  const raw = preprocess(exprEl.value || 'sin(x)');
+  const xMin=-10, xMax=10;
+  let yMin=Infinity, yMax=-Infinity;
+  const pts = [];
+  for (let px=0; px<=w; px++){
+    const x = xMin + (px/w)*(xMax-xMin);
+    let y;
+    try{ y = mj.evaluate(raw, {x, ans:lastAns}); }catch(e){ y = NaN; }
+    if (typeof y !== 'number' || !isFinite(y)) y = NaN;
+    pts.push(y);
+    if (!isNaN(y)){ yMin = Math.min(yMin,y); yMax = Math.max(yMax,y); }
+  }
+  if (!isFinite(yMin) || !isFinite(yMax)){ yMin=-1; yMax=1; }
+  if (yMin === yMax){ yMin -= 1; yMax += 1; }
+  const pad = (yMax-yMin)*0.1;
+  yMin -= pad; yMax += pad;
+
+  const toY = (y)=> h - ((y-yMin)/(yMax-yMin))*h;
+
+  // axes
+  ctx.strokeStyle = '#aab3c4'; ctx.lineWidth = 1;
+  if (yMin < 0 && yMax > 0){
+    ctx.beginPath(); ctx.moveTo(0, toY(0)); ctx.lineTo(w, toY(0)); ctx.stroke();
+  }
+  const zeroX = ((0-xMin)/(xMax-xMin))*w;
+  ctx.beginPath(); ctx.moveTo(zeroX,0); ctx.lineTo(zeroX,h); ctx.stroke();
+
+  // curve
+  ctx.strokeStyle = '#6c8cff'; ctx.lineWidth = 2.5; ctx.beginPath();
+  let started = false;
+  for (let px=0; px<=w; px++){
+    const y = pts[px];
+    if (isNaN(y)){ started=false; continue; }
+    const cy = toY(y);
+    if (!started){ ctx.moveTo(px,cy); started=true; } else ctx.lineTo(px,cy);
+  }
+  ctx.stroke();
+});
+
+/* ============================================================
+   GRAPH THEORY WORKBENCH
+   ============================================================ */
+document.getElementById('graphOp').addEventListener('change', (e)=>{
+  document.getElementById('pathRow').style.display = e.target.value === 'path' ? 'flex' : 'none';
+});
+
+function buildGraph(edgeStr){
+  const adj = new Map();
+  const addNode = (n)=>{ if(!adj.has(n)) adj.set(n, new Set()); };
+  const edges = edgeStr.split(',').map(s=>s.trim()).filter(Boolean);
+  edges.forEach(pair=>{
+    const [a,b] = pair.split('-').map(s=>s.trim());
+    if (!a || !b) return;
+    addNode(a); addNode(b);
+    adj.get(a).add(b); adj.get(b).add(a);
+  });
+  return adj;
+}
+
+function graphSummary(adj){
+  const nodes = [...adj.keys()];
+  let edgeCount = 0;
+  nodes.forEach(n=> edgeCount += adj.get(n).size);
+  edgeCount = edgeCount/2;
+  return `Vertices (${nodes.length}): ${nodes.join(', ')}\nEdges: ${edgeCount}`;
+}
+function degreeSequence(adj){
+  const nodes = [...adj.keys()].sort();
+  return nodes.map(n=> `${n}: degree ${adj.get(n).size}`).join('\n');
+}
+function adjMatrix(adj){
+  const nodes = [...adj.keys()].sort();
+  let html = '<table class="mini-table"><tr><th></th>' + nodes.map(n=>`<th>${n}</th>`).join('') + '</tr>';
+  nodes.forEach(a=>{
+    html += `<tr><th>${a}</th>` + nodes.map(b=> `<td>${adj.get(a).has(b)?1:0}</td>`).join('') + '</tr>';
+  });
+  html += '</table>';
+  return html;
+}
+function isConnected(adj){
+  const nodes = [...adj.keys()];
+  if (nodes.length === 0) return true;
+  const visited = new Set([nodes[0]]);
+  const queue = [nodes[0]];
+  while (queue.length){
+    const cur = queue.shift();
+    adj.get(cur).forEach(nb=>{ if(!visited.has(nb)){ visited.add(nb); queue.push(nb); } });
+  }
+  return visited.size === nodes.length;
+}
+function eulerCheck(adj){
+  const nodes = [...adj.keys()];
+  if (!isConnected(adj)) return 'Not connected — no Eulerian path or circuit.';
+  const odd = nodes.filter(n=> adj.get(n).size % 2 !== 0);
+  if (odd.length === 0) return 'All degrees even & connected → Eulerian CIRCUIT exists.';
+  if (odd.length === 2) return `Exactly two odd-degree vertices (${odd.join(', ')}) → Eulerian PATH exists (not a circuit).`;
+  return `${odd.length} odd-degree vertices → no Eulerian path or circuit.`;
+}
+function hasCycle(adj){
+  const visited = new Set();
+  let found = false;
+  function dfs(node, parent){
+    visited.add(node);
+    for (const nb of adj.get(node)){
+      if (!visited.has(nb)){ if (dfs(nb, node)) return true; }
+      else if (nb !== parent){ return true; }
+    }
+    return false;
+  }
+  for (const n of adj.keys()){
+    if (!visited.has(n)){ if (dfs(n, null)){ found = true; break; } }
+  }
+  return found;
+}
+function shortestPath(adj, from, to){
+  if (!adj.has(from) || !adj.has(to)) return `Unknown node. Available: ${[...adj.keys()].join(', ')}`;
+  const prev = new Map();
+  const visited = new Set([from]);
+  const queue = [from];
+  while (queue.length){
+    const cur = queue.shift();
+    if (cur === to) break;
+    for (const nb of adj.get(cur)){
+      if (!visited.has(nb)){ visited.add(nb); prev.set(nb, cur); queue.push(nb); }
+    }
+  }
+  if (!visited.has(to)) return `No path from ${from} to ${to}.`;
+  const path = [to];
+  let cur = to;
+  while (cur !== from){ cur = prev.get(cur); path.unshift(cur); }
+  return `Path: ${path.join(' → ')}\nLength: ${path.length-1} edge(s)`;
+}
+
+/* ============================================================
+   KEY LABEL AUTO-FIT — shrinks any button label that would
+   overflow its (unchanged) button size, so nothing clips or
+   looks mismatched across pages. Font-size only; no layout change.
+   ============================================================ */
+function autofitKeyLabels(){
+  document.querySelectorAll('.key, .run-btn, .mode-badge, .ans-badge').forEach(el=>{
+    if (el.dataset.baseSize === undefined){
+      el.dataset.baseSize = parseFloat(getComputedStyle(el).fontSize);
+    }
+    let size = el.dataset.baseSize;
+    el.style.fontSize = size + 'px';
+    let guard = 0;
+    while ((el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1) &&
+           size > 8 && guard < 30){
+      size -= 0.5;
+      el.style.fontSize = size + 'px';
+      guard++;
+    }
+  });
+}
+window.addEventListener('load', autofitKeyLabels);
+window.addEventListener('resize', autofitKeyLabels);
+
+document.getElementById('graphRun').addEventListener('click', ()=>{
+  const out = document.getElementById('graphOut');
+  const edgeStr = document.getElementById('graphEdges').value;
+  if (!edgeStr.trim()){ out.textContent = 'Enter edges first, e.g. A-B,B-C,C-A,C-D'; return; }
+  const adj = buildGraph(edgeStr);
+  const op = document.getElementById('graphOp').value;
+  let result;
+  if (op === 'summary') result = graphSummary(adj);
+  else if (op === 'degree') result = degreeSequence(adj);
+  else if (op === 'adj') { out.innerHTML = adjMatrix(adj); return; }
+  else if (op === 'connected') result = isConnected(adj) ? 'Yes — the graph is connected.' : 'No — the graph is disconnected.';
+  else if (op === 'euler') result = eulerCheck(adj);
+  else if (op === 'cycle') result = hasCycle(adj) ? 'Yes — the graph contains a cycle.' : 'No — the graph is acyclic (a forest).';
+  else if (op === 'path') {
+    const from = document.getElementById('pathFrom').value.trim();
+    const to = document.getElementById('pathTo').value.trim();
+    result = from && to ? shortestPath(adj, from, to) : 'Enter both a "from" and "to" node.';
+  }
+  out.textContent = result;
+});
+</script>
+</body>
+</html>
